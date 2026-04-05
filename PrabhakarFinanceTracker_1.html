@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Money Tracker — Prabhakar Prasad</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #F4F6FA; color: #1a1a2e; }
+
+  .header { background: linear-gradient(135deg, #1F3864, #2E5FA3); color: white; padding: 20px 28px; display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 20px; font-weight: 600; }
+  .header p { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+  .month-nav { display: flex; align-items: center; gap: 12px; }
+  .month-nav button { background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px; }
+  .month-nav button:hover { background: rgba(255,255,255,0.35); }
+  .month-label { font-size: 15px; font-weight: 600; min-width: 120px; text-align: center; }
+
+  .summary-bar { display: flex; gap: 12px; padding: 16px 28px; background: white; border-bottom: 1px solid #e8e8e8; flex-wrap: wrap; }
+  .sum-card { flex: 1; min-width: 130px; background: #f7f8fc; border-radius: 10px; padding: 12px 16px; border-left: 4px solid; }
+  .sum-card.total { border-color: #1F3864; }
+  .sum-card.essential { border-color: #e74c3c; }
+  .sum-card.lifestyle { border-color: #f39c12; }
+  .sum-card.savings { border-color: #27ae60; }
+  .sum-card .val { font-size: 22px; font-weight: 700; color: #1a1a2e; }
+  .sum-card .lbl { font-size: 11px; color: #888; margin-top: 2px; text-transform: uppercase; letter-spacing: .04em; }
+  .sum-card .sub { font-size: 11px; color: #aaa; margin-top: 1px; }
+
+  .main { display: grid; grid-template-columns: 340px 1fr; gap: 0; min-height: calc(100vh - 160px); }
+
+  /* LEFT PANEL */
+  .left { background: white; border-right: 1px solid #eee; padding: 20px; overflow-y: auto; }
+  .panel-title { font-size: 13px; font-weight: 700; color: #1F3864; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 14px; }
+
+  /* ADD EXPENSE FORM */
+  .add-form { background: #f7f8fc; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+  .form-row { margin-bottom: 10px; }
+  .form-row label { font-size: 11px; color: #666; font-weight: 600; display: block; margin-bottom: 4px; }
+  .form-row input, .form-row select { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 7px; font-size: 13px; color: #333; background: white; }
+  .form-row input:focus, .form-row select:focus { outline: none; border-color: #2E5FA3; }
+  .form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .btn-add { width: 100%; padding: 9px; background: #1F3864; color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+  .btn-add:hover { background: #2E5FA3; }
+
+  /* CATEGORY BREAKDOWN */
+  .cat-list { }
+  .cat-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+  .cat-item:hover { background: #fafbff; border-radius: 6px; padding-left: 4px; }
+  .cat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .cat-name { flex: 1; font-size: 13px; color: #333; }
+  .cat-bar-wrap { width: 70px; background: #eee; border-radius: 99px; height: 5px; }
+  .cat-bar { height: 5px; border-radius: 99px; }
+  .cat-amt { font-size: 13px; font-weight: 600; color: #222; min-width: 60px; text-align: right; }
+
+  /* RIGHT PANEL */
+  .right { padding: 20px 24px; overflow-y: auto; }
+
+  /* MONTHLY CHART */
+  .chart-wrap { background: white; border-radius: 14px; padding: 20px; margin-bottom: 18px; }
+  .chart-title { font-size: 13px; font-weight: 700; color: #1F3864; margin-bottom: 14px; text-transform: uppercase; letter-spacing: .05em; }
+  .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 130px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bar-block { width: 100%; border-radius: 5px 5px 0 0; min-height: 4px; transition: height .3s; cursor: pointer; position: relative; }
+  .bar-block:hover::after { content: attr(data-tip); position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 3px 8px; border-radius: 5px; font-size: 11px; white-space: nowrap; z-index: 10; }
+  .bar-month { font-size: 10px; color: #999; }
+  .bar-amt { font-size: 10px; color: #555; font-weight: 600; }
+
+  /* TRANSACTIONS */
+  .txn-wrap { background: white; border-radius: 14px; padding: 20px; margin-bottom: 18px; }
+  .txn-filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .filter-btn { padding: 5px 12px; border-radius: 20px; border: 1px solid #ddd; background: white; font-size: 12px; cursor: pointer; color: #555; }
+  .filter-btn.active { background: #1F3864; color: white; border-color: #1F3864; }
+  .txn-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .txn-table th { text-align: left; padding: 8px 10px; font-size: 11px; color: #888; font-weight: 600; border-bottom: 1px solid #eee; text-transform: uppercase; letter-spacing: .04em; }
+  .txn-table td { padding: 9px 10px; border-bottom: 1px solid #f5f5f5; }
+  .txn-table tr:hover td { background: #fafbff; }
+  .txn-cat { display: inline-flex; align-items: center; gap: 5px; }
+  .txn-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .txn-amt { font-weight: 700; color: #c0392b; }
+  .delete-btn { background: none; border: none; color: #ddd; cursor: pointer; font-size: 14px; }
+  .delete-btn:hover { color: #e74c3c; }
+
+  /* INSIGHTS */
+  .insights-wrap { background: white; border-radius: 14px; padding: 20px; }
+  .insight-card { border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; border-left: 4px solid; }
+  .insight-card.warn { background: #fff8e1; border-color: #f39c12; }
+  .insight-card.good { background: #e8f8ef; border-color: #27ae60; }
+  .insight-card.tip { background: #eef2ff; border-color: #2E5FA3; }
+  .insight-card h4 { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 4px; }
+  .insight-card p { font-size: 12px; color: #666; line-height: 1.5; }
+
+  .empty { text-align: center; padding: 30px; color: #bbb; font-size: 13px; }
+
+  /* IMPORT */
+  .import-bar { background: #eef2ff; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #555; display: flex; align-items: center; gap: 8px; }
+  .import-bar span { flex: 1; }
+  .import-bar button { background: #2E5FA3; color: white; border: none; padding: 5px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+
+  @media(max-width: 768px) {
+    .main { grid-template-columns: 1fr; }
+    .summary-bar { padding: 12px 16px; }
+    .header { flex-direction: column; gap: 10px; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>💰 Personal Finance Tracker</h1>
+    <p>Prabhakar Prasad · Spend Optimiser</p>
+  </div>
+  <div class="month-nav">
+    <button onclick="changeMonth(-1)">‹ Prev</button>
+    <div class="month-label" id="monthLabel">April 2026</div>
+    <button onclick="changeMonth(1)">Next ›</button>
+  </div>
+</div>
+
+<div class="summary-bar">
+  <div class="sum-card total">
+    <div class="val" id="sumTotal">₹0</div>
+    <div class="lbl">Total Spent</div>
+    <div class="sub" id="sumMonth">This month</div>
+  </div>
+  <div class="sum-card essential">
+    <div class="val" id="sumEssential">₹0</div>
+    <div class="lbl">Essential</div>
+    <div class="sub">EMI · Utilities · Loans</div>
+  </div>
+  <div class="sum-card lifestyle">
+    <div class="val" id="sumLifestyle">₹0</div>
+    <div class="lbl">Lifestyle</div>
+    <div class="sub">Ecom · Food · Travel</div>
+  </div>
+  <div class="sum-card savings">
+    <div class="val" id="savingsAmt">₹0</div>
+    <div class="lbl">Saved / Budget Left</div>
+    <div class="sub" id="savingsPct">Set monthly budget below</div>
+  </div>
+</div>
+
+<div class="main">
+  <!-- LEFT -->
+  <div class="left">
+    <div class="panel-title">Add Expense</div>
+
+    <div class="add-form">
+      <div class="import-bar">
+        <span>📧 Paste Gmail bill/receipt amounts below or add manually</span>
+      </div>
+      <div class="form-row">
+        <label>Description</label>
+        <input type="text" id="fDesc" placeholder="e.g. Amazon order, Electricity bill..." />
+      </div>
+      <div class="form-2col">
+        <div class="form-row">
+          <label>Amount (₹)</label>
+          <input type="number" id="fAmt" placeholder="0" />
+        </div>
+        <div class="form-row">
+          <label>Date</label>
+          <input type="date" id="fDate" />
+        </div>
+      </div>
+      <div class="form-2col">
+        <div class="form-row">
+          <label>Category</label>
+          <select id="fCat">
+            <option value="EMI / Loan">EMI / Loan</option>
+            <option value="Electricity">Electricity</option>
+            <option value="Water / Gas">Water / Gas</option>
+            <option value="Internet / Mobile">Internet / Mobile</option>
+            <option value="Rent">Rent</option>
+            <option value="Car / Fuel">Car / Fuel</option>
+            <option value="Insurance">Insurance</option>
+            <option value="Groceries">Groceries</option>
+            <option value="Food / Dining">Food / Dining</option>
+            <option value="Ecommerce / Shopping">Ecommerce / Shopping</option>
+            <option value="OTT / Subscriptions">OTT / Subscriptions</option>
+            <option value="Health / Medical">Health / Medical</option>
+            <option value="Education">Education</option>
+            <option value="Travel">Travel</option>
+            <option value="Investments">Investments</option>
+            <option value="Extra / Others">Extra / Others</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Type</label>
+          <select id="fType">
+            <option value="Essential">Essential</option>
+            <option value="Lifestyle">Lifestyle</option>
+            <option value="Investment">Investment</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Monthly Budget (₹)</label>
+        <input type="number" id="fBudget" placeholder="e.g. 80000" oninput="saveBudget()" />
+      </div>
+      <button class="btn-add" onclick="addExpense()">+ Add Expense</button>
+    </div>
+
+    <div class="panel-title">Categories This Month</div>
+    <div class="cat-list" id="catList"></div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right">
+    <!-- MONTHLY TREND -->
+    <div class="chart-wrap">
+      <div class="chart-title">📊 Monthly Spend Trend</div>
+      <div class="bar-chart" id="barChart"></div>
+    </div>
+
+    <!-- TRANSACTIONS -->
+    <div class="txn-wrap">
+      <div class="chart-title">🧾 Transactions</div>
+      <div class="txn-filter" id="filterBar"></div>
+      <table class="txn-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Type</th>
+            <th style="text-align:right">Amount</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="txnBody"></tbody>
+      </table>
+    </div>
+
+    <!-- INSIGHTS -->
+    <div class="insights-wrap">
+      <div class="chart-title">💡 Spend Insights & Optimisation</div>
+      <div id="insightsArea"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CATEGORY CONFIG ───────────────────────────────────────
+const CAT_COLORS = {
+  "EMI / Loan":           "#e74c3c",
+  "Electricity":          "#f39c12",
+  "Water / Gas":          "#1abc9c",
+  "Internet / Mobile":    "#3498db",
+  "Rent":                 "#9b59b6",
+  "Car / Fuel":           "#e67e22",
+  "Insurance":            "#c0392b",
+  "Groceries":            "#27ae60",
+  "Food / Dining":        "#f1c40f",
+  "Ecommerce / Shopping": "#2980b9",
+  "OTT / Subscriptions":  "#8e44ad",
+  "Health / Medical":     "#16a085",
+  "Education":            "#2ecc71",
+  "Travel":               "#d35400",
+  "Investments":          "#1F3864",
+  "Extra / Others":       "#95a5a6"
+};
+
+// ── STATE ─────────────────────────────────────────────────
+let currentDate = new Date(2026, 3, 1); // April 2026
+let activeFilter = "All";
+let budget = 80000;
+
+// Load from localStorage
+function loadData() {
+  const raw = localStorage.getItem('pp_expenses');
+  return raw ? JSON.parse(raw) : getSampleData();
+}
+
+function saveData(data) {
+  localStorage.setItem('pp_expenses', JSON.stringify(data));
+}
+
+function getSampleData() {
+  // Sample pre-loaded data across 3 months for demo
+  return [
+    { id: 1, desc: "Home Loan EMI", amt: 28000, date: "2026-04-05", cat: "EMI / Loan", type: "Essential" },
+    { id: 2, desc: "Car Loan EMI", amt: 8500, date: "2026-04-05", cat: "EMI / Loan", type: "Essential" },
+    { id: 3, desc: "Electricity Bill - UPPCL", amt: 2800, date: "2026-04-10", cat: "Electricity", type: "Essential" },
+    { id: 4, desc: "Airtel Broadband", amt: 999, date: "2026-04-02", cat: "Internet / Mobile", type: "Essential" },
+    { id: 5, desc: "Amazon Order - Books", amt: 1250, date: "2026-04-08", cat: "Ecommerce / Shopping", type: "Lifestyle" },
+    { id: 6, desc: "Swiggy - Weekend Orders", amt: 1800, date: "2026-04-13", cat: "Food / Dining", type: "Lifestyle" },
+    { id: 7, desc: "Petrol - Car", amt: 3200, date: "2026-04-07", cat: "Car / Fuel", type: "Essential" },
+    { id: 8, desc: "Netflix + Hotstar", amt: 1099, date: "2026-04-01", cat: "OTT / Subscriptions", type: "Lifestyle" },
+    { id: 9, desc: "Grocery - BigBasket", amt: 4500, date: "2026-04-06", cat: "Groceries", type: "Essential" },
+    { id: 10, desc: "Doctor Visit", amt: 800, date: "2026-04-15", cat: "Health / Medical", type: "Essential" },
+    { id: 11, desc: "Flipkart Sale - Clothes", amt: 3200, date: "2026-04-12", cat: "Ecommerce / Shopping", type: "Lifestyle" },
+    { id: 12, desc: "LIC Premium", amt: 5500, date: "2026-04-20", cat: "Insurance", type: "Essential" },
+    // March
+    { id: 13, desc: "Home Loan EMI", amt: 28000, date: "2026-03-05", cat: "EMI / Loan", type: "Essential" },
+    { id: 14, desc: "Car Loan EMI", amt: 8500, date: "2026-03-05", cat: "EMI / Loan", type: "Essential" },
+    { id: 15, desc: "Electricity Bill", amt: 3100, date: "2026-03-10", cat: "Electricity", type: "Essential" },
+    { id: 16, desc: "Amazon - Electronics", amt: 8500, date: "2026-03-18", cat: "Ecommerce / Shopping", type: "Lifestyle" },
+    { id: 17, desc: "Petrol", amt: 3000, date: "2026-03-07", cat: "Car / Fuel", type: "Essential" },
+    { id: 18, desc: "Swiggy + Zomato", amt: 2400, date: "2026-03-20", cat: "Food / Dining", type: "Lifestyle" },
+    { id: 19, desc: "Grocery", amt: 4800, date: "2026-03-06", cat: "Groceries", type: "Essential" },
+    { id: 20, desc: "Weekend trip fuel", amt: 2000, date: "2026-03-22", cat: "Travel", type: "Lifestyle" },
+    // February
+    { id: 21, desc: "Home Loan EMI", amt: 28000, date: "2026-02-05", cat: "EMI / Loan", type: "Essential" },
+    { id: 22, desc: "Car Loan EMI", amt: 8500, date: "2026-02-05", cat: "EMI / Loan", type: "Essential" },
+    { id: 23, desc: "Electricity", amt: 2600, date: "2026-02-10", cat: "Electricity", type: "Essential" },
+    { id: 24, desc: "Valentines Dinner", amt: 3500, date: "2026-02-14", cat: "Food / Dining", type: "Lifestyle" },
+    { id: 25, desc: "Myntra Sale", amt: 5200, date: "2026-02-18", cat: "Ecommerce / Shopping", type: "Lifestyle" },
+    { id: 26, desc: "Grocery", amt: 4200, date: "2026-02-06", cat: "Groceries", type: "Essential" },
+    { id: 27, desc: "Petrol", amt: 2800, date: "2026-02-08", cat: "Car / Fuel", type: "Essential" },
+  ];
+}
+
+// ── CORE FUNCTIONS ────────────────────────────────────────
+function getMonthKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+}
+
+function getMonthExpenses(data, date) {
+  const key = getMonthKey(date);
+  return data.filter(e => e.date.startsWith(key));
+}
+
+function changeMonth(dir) {
+  currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + dir, 1);
+  activeFilter = "All";
+  render();
+}
+
+function saveBudget() {
+  const b = parseFloat(document.getElementById('fBudget').value);
+  if (!isNaN(b) && b > 0) {
+    budget = b;
+    localStorage.setItem('pp_budget', b);
+    render();
+  }
+}
+
+function addExpense() {
+  const desc = document.getElementById('fDesc').value.trim();
+  const amt  = parseFloat(document.getElementById('fAmt').value);
+  const date = document.getElementById('fDate').value;
+  const cat  = document.getElementById('fCat').value;
+  const type = document.getElementById('fType').value;
+
+  if (!desc || isNaN(amt) || amt <= 0 || !date) {
+    alert('Please fill in description, amount, and date.');
+    return;
+  }
+
+  const data = loadData();
+  const id = Date.now();
+  data.push({ id, desc, amt, date, cat, type });
+  saveData(data);
+
+  document.getElementById('fDesc').value = '';
+  document.getElementById('fAmt').value = '';
+  render();
+}
+
+function deleteExpense(id) {
+  const data = loadData().filter(e => e.id !== id);
+  saveData(data);
+  render();
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  render();
+}
+
+// ── RENDER ────────────────────────────────────────────────
+function render() {
+  const data     = loadData();
+  const monthExp = getMonthExpenses(data, currentDate);
+  const months   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // Budget
+  const savedBudget = localStorage.getItem('pp_budget');
+  if (savedBudget) {
+    budget = parseFloat(savedBudget);
+    document.getElementById('fBudget').value = budget;
+  }
+
+  // Month label
+  document.getElementById('monthLabel').textContent =
+    `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+
+  // Totals
+  const total     = monthExp.reduce((s,e) => s + e.amt, 0);
+  const essential = monthExp.filter(e => e.type === 'Essential').reduce((s,e) => s + e.amt, 0);
+  const lifestyle = monthExp.filter(e => e.type === 'Lifestyle').reduce((s,e) => s + e.amt, 0);
+  const left      = budget - total;
+
+  document.getElementById('sumTotal').textContent     = fmt(total);
+  document.getElementById('sumEssential').textContent = fmt(essential);
+  document.getElementById('sumLifestyle').textContent = fmt(lifestyle);
+  document.getElementById('savingsAmt').textContent   = fmt(Math.max(0, left));
+  document.getElementById('savingsPct').textContent   =
+    budget > 0 ? `${Math.round((left/budget)*100)}% of ₹${fmt(budget)} budget` : 'Set budget above';
+
+  // Category breakdown
+  const catMap = {};
+  monthExp.forEach(e => {
+    catMap[e.cat] = (catMap[e.cat] || 0) + e.amt;
+  });
+  const maxCat = Math.max(...Object.values(catMap), 1);
+  const catSorted = Object.entries(catMap).sort((a,b) => b[1]-a[1]);
+
+  document.getElementById('catList').innerHTML = catSorted.length ? catSorted.map(([cat, amt]) => `
+    <div class="cat-item" onclick="setFilter('${cat}')">
+      <div class="cat-dot" style="background:${CAT_COLORS[cat]||'#999'}"></div>
+      <div class="cat-name">${cat}</div>
+      <div class="cat-bar-wrap"><div class="cat-bar" style="width:${Math.round((amt/maxCat)*100)}%;background:${CAT_COLORS[cat]||'#999'}"></div></div>
+      <div class="cat-amt">${fmt(amt)}</div>
+    </div>`).join('')
+  : '<div class="empty">No expenses this month</div>';
+
+  // Bar chart — last 6 months
+  const barData = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+    const exp = getMonthExpenses(data, d);
+    const tot = exp.reduce((s,e) => s + e.amt, 0);
+    barData.push({ label: months[d.getMonth()], amt: tot });
+  }
+  const maxBar = Math.max(...barData.map(b => b.amt), 1);
+  document.getElementById('barChart').innerHTML = barData.map((b, i) => {
+    const h = Math.round((b.amt / maxBar) * 110);
+    const isActive = i === 5;
+    return `<div class="bar-col">
+      <div class="bar-amt">${b.amt > 0 ? fmtK(b.amt) : ''}</div>
+      <div class="bar-block" style="height:${h}px;background:${isActive?'#1F3864':'#9ab0cc'}" data-tip="${b.label}: ${fmt(b.amt)}"></div>
+      <div class="bar-month">${b.label}</div>
+    </div>`;
+  }).join('');
+
+  // Filter bar
+  const cats = ['All', ...new Set(monthExp.map(e => e.cat))];
+  document.getElementById('filterBar').innerHTML = cats.map(c =>
+    `<button class="filter-btn ${activeFilter===c?'active':''}" onclick="setFilter('${c}')">${c}</button>`
+  ).join('');
+
+  // Transactions
+  const filtered = activeFilter === 'All' ? monthExp
+    : monthExp.filter(e => e.cat === activeFilter);
+  const sorted = [...filtered].sort((a,b) => new Date(b.date) - new Date(a.date));
+
+  document.getElementById('txnBody').innerHTML = sorted.length
+    ? sorted.map(e => `
+      <tr>
+        <td>${formatDate(e.date)}</td>
+        <td>${e.desc}</td>
+        <td><span class="txn-cat"><span class="txn-dot" style="background:${CAT_COLORS[e.cat]||'#999'}"></span>${e.cat}</span></td>
+        <td><span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${e.type==='Essential'?'#ffeaea':e.type==='Lifestyle'?'#fff8e1':'#eef5ff'};color:${e.type==='Essential'?'#c0392b':e.type==='Lifestyle'?'#e67e22':'#1F3864'}">${e.type}</span></td>
+        <td class="txn-amt" style="text-align:right">${fmt(e.amt)}</td>
+        <td><button class="delete-btn" onclick="deleteExpense(${e.id})">✕</button></td>
+      </tr>`)
+    .join('')
+    : `<tr><td colspan="6" class="empty">No transactions. Add your first expense!</td></tr>`;
+
+  // Insights
+  renderInsights(monthExp, total, essential, lifestyle);
+}
+
+function renderInsights(expenses, total, essential, lifestyle) {
+  const insights = [];
+  const cats = {};
+  expenses.forEach(e => cats[e.cat] = (cats[e.cat] || 0) + e.amt);
+
+  // Over budget
+  if (budget > 0 && total > budget) {
+    insights.push({ type: 'warn', title: `Over budget by ${fmt(total - budget)}`,
+      msg: `You've spent ${fmt(total)} against a budget of ${fmt(budget)}. Consider reviewing discretionary spending.` });
+  } else if (budget > 0 && total > budget * 0.85) {
+    insights.push({ type: 'warn', title: 'Approaching budget limit',
+      msg: `You've used ${Math.round((total/budget)*100)}% of your monthly budget. ${fmt(budget-total)} remaining.` });
+  }
+
+  // Ecom spike
+  const ecom = cats['Ecommerce / Shopping'] || 0;
+  if (ecom > 5000) {
+    insights.push({ type: 'tip', title: `Ecommerce at ${fmt(ecom)} — Optimise Timing`,
+      msg: `Large ecom spends this month. Best time to buy on Amazon/Flipkart: end of month sales (last 3 days) or major sale events. Use HDFC/ICICI card for extra 5-10% off on selected days.` });
+  }
+
+  // Utility tip
+  const elec = cats['Electricity'] || 0;
+  if (elec > 2500) {
+    insights.push({ type: 'tip', title: `Electricity at ${fmt(elec)} — Reduce by 15-20%`,
+      msg: `Shift high-consumption appliances (AC, geyser, washing machine) to off-peak hours (11pm–6am). Most DISCOMs charge lower ToD tariffs in off-peak slots.` });
+  }
+
+  // Food tip
+  const food = cats['Food / Dining'] || 0;
+  if (food > 2000) {
+    insights.push({ type: 'tip', title: `Food delivery at ${fmt(food)} — Save up to 40%`,
+      msg: `Swiggy & Zomato offer best discounts between 2pm-5pm and after 10pm. Use Swiggy One or Zomato Gold for free delivery. Weekend cooking saves ₹800-1200/month.` });
+  }
+
+  // EMI check
+  const emi = cats['EMI / Loan'] || 0;
+  if (emi > 0) {
+    const emiPct = Math.round((emi/total)*100);
+    if (emiPct > 40) {
+      insights.push({ type: 'warn', title: `EMI at ${emiPct}% of total spend — High FOIR`,
+        msg: `Your Fixed Obligation to Income Ratio appears high. Ideal FOIR for loan eligibility is below 40%. Consider prepaying one loan partially to reduce monthly obligation.` });
+    } else {
+      insights.push({ type: 'good', title: `EMI-to-spend ratio looks healthy at ${emiPct}%`,
+        msg: `Your loan EMI is within manageable range. Keep maintaining on-time payments to build your credit score above 750.` });
+    }
+  }
+
+  // OTT
+  const ott = cats['OTT / Subscriptions'] || 0;
+  if (ott > 1000) {
+    insights.push({ type: 'tip', title: `Subscriptions at ${fmt(ott)} — Audit annually`,
+      msg: `Check for unused OTT subscriptions. Most platforms offer annual plans at 30-40% discount vs monthly. Share family plans across 4 accounts for Netflix, Hotstar, Amazon.` });
+  }
+
+  // Good month
+  if (budget > 0 && total < budget * 0.75) {
+    insights.push({ type: 'good', title: `Good month — ${Math.round(((budget-total)/budget)*100)}% under budget!`,
+      msg: `You saved ${fmt(budget-total)} this month. Consider moving this to a liquid fund or SIP rather than letting it sit in a savings account earning 3-4%.` });
+  }
+
+  // Fuel
+  const fuel = cats['Car / Fuel'] || 0;
+  if (fuel > 2500) {
+    insights.push({ type: 'tip', title: `Fuel at ${fmt(fuel)} — Fill on Tuesdays & Wednesdays`,
+      msg: `Petrol prices in India update every morning. Fill up early morning (before 6am) or on weekdays when prices stabilise. HPCL, BPCL credit card users get ₹100-150/fill savings.` });
+  }
+
+  document.getElementById('insightsArea').innerHTML = insights.length
+    ? insights.map(i => `<div class="insight-card ${i.type}"><h4>${i.title}</h4><p>${i.msg}</p></div>`).join('')
+    : `<div class="insight-card good"><h4>✅ Looking good this month!</h4><p>Add more expenses to get personalised optimisation insights.</p></div>`;
+}
+
+// ── UTILS ─────────────────────────────────────────────────
+function fmt(n) {
+  return '₹' + Number(n).toLocaleString('en-IN');
+}
+function fmtK(n) {
+  return n >= 100000 ? `₹${(n/100000).toFixed(1)}L` : n >= 1000 ? `₹${(n/1000).toFixed(1)}K` : `₹${n}`;
+}
+function formatDate(d) {
+  const dt = new Date(d);
+  return `${dt.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getMonth()]}`;
+}
+
+// Set today's date as default
+document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+
+// Initial render
+render();
+</script>
+</body>
+</html>
